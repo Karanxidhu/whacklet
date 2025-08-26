@@ -1,8 +1,9 @@
 import { Bot } from "grammy";
 import dotenv from "dotenv";
-import { createNFT, createWallet, getBalance, transfer } from "./commands.js";
+import { createNFT, createWallet, getBalance, getTokenAccounts, transfer, transferNFT, } from "./commands.js";
 import prisma from "./db/prisma.js";
 import { aesDecrypt } from "./encrypt.js";
+import { PublicKey } from "@solana/web3.js";
 dotenv.config();
 const bot = new Bot(process.env.BOT_TOKEN);
 function escapeMarkdownV2(text) {
@@ -194,11 +195,70 @@ bot.command("nft", async (ctx) => {
 👛 *Name:* \`${name}\`
 🔑 *Mint Address:* \`${mint.mintAddress}\`
 🔑 *Signature:* \`${mint.signature}\`
+🔑 *Associated Token Address:* \`${mint.ata}\`
 ⚠️ _Keep your private key safe and never share it_`, { parse_mode: "MarkdownV2" });
     }
     else {
-        await ctx.reply(`💰 *NFT Creation Failed* 😔`, { parse_mode: "MarkdownV2" });
+        await ctx.reply(`💰 *NFT Creation Failed* 😔`, {
+            parse_mode: "MarkdownV2",
+        });
     }
+});
+bot.command("transfernft", async (ctx) => {
+    const fullText = ctx.message?.text ?? "";
+    const args = fullText.split(" ").slice(1);
+    const to = args[0];
+    const mintAddress = args[1];
+    if (!to || !mintAddress) {
+        await ctx.reply("❌ Please provide a name, e.g. `/transfernft <to addresss> <mint address>`", {
+            parse_mode: "Markdown",
+        });
+        return;
+    }
+    await ctx.reply("Transferring...");
+    const user = await prisma.user.findFirst({
+        where: { chatId: ctx.chat.id.toString() },
+        include: { wallets: true },
+    });
+    if (!user) {
+        await ctx.reply("❌ You don't have any wallets yet. Create one with /createwallet");
+        return;
+    }
+    const from = user.wallets.find((w) => w.id === user.defaultWallet);
+    if (!from) {
+        await ctx.reply("❌ You don't have any wallets yet. Create one with /createwallet");
+        return;
+    }
+    const transfer = await transferNFT(from, to, mintAddress);
+    if (transfer.success) {
+        await ctx.reply(`💰 *Transfer Successful*\n\n` +
+            `👛 *Name:* \`${escapeMarkdownV2(from.name)}\`\n` +
+            `🔑 *Public Key:* \`${escapeMarkdownV2(aesDecrypt(from.publicKey, process.env.ENCRYPTION_SECRET))}\`\n` +
+            `👛 *To:* \`${escapeMarkdownV2(to)}\`\n` +
+            `🔑 *Mint Address:* \`${escapeMarkdownV2(mintAddress)}\`\n` +
+            `🔗 *Transaction Signature:* \`${escapeMarkdownV2(transfer.signature)}\``, { parse_mode: "MarkdownV2" });
+    }
+    else {
+        await ctx.reply(`💰 *Transfer Failed* 😔`, { parse_mode: "MarkdownV2" });
+    }
+});
+bot.command("gettokens", async (ctx) => {
+    const chatId = ctx.chat.id.toString();
+    const user = await prisma.user.findFirst({
+        where: { chatId: chatId },
+        include: { wallets: true },
+    });
+    if (!user) {
+        await ctx.reply("❌ You don't have any wallets yet. Create one with /createwallet");
+        return;
+    }
+    const wallet = user.wallets.find((w) => w.id === user.defaultWallet);
+    if (!wallet) {
+        await ctx.reply("❌ You don't have any wallets yet. Create one with /createwallet");
+        return;
+    }
+    const tokenAccounts = await getTokenAccounts(new PublicKey(aesDecrypt(wallet.publicKey, process.env.ENCRYPTION_SECRET)));
+    await ctx.reply(`💰 *Tokens*\n\n`);
 });
 bot.start();
 //# sourceMappingURL=index.js.map

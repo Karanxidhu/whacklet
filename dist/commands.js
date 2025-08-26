@@ -2,8 +2,8 @@ import { Connection, Keypair, PublicKey, sendAndConfirmTransaction, SystemProgra
 import bs58 from "bs58";
 import prisma from "./db/prisma.js";
 import { aesDecrypt, aesEncrypt } from "./encrypt.js";
-import { createAssociatedTokenAccountInstruction, createInitializeMetadataPointerInstruction, createInitializeMintInstruction, createMintToInstruction, ExtensionType, getAssociatedTokenAddress, getMinimumBalanceForRentExemptMint, getMintLen, LENGTH_SIZE, MINT_SIZE, TOKEN_2022_PROGRAM_ID, TOKEN_PROGRAM_ID, TYPE_SIZE, } from "@solana/spl-token";
-import { createInitializeInstruction, pack } from "@solana/spl-token-metadata";
+import { AuthorityType, createAssociatedTokenAccountInstruction, createInitializeMetadataPointerInstruction, createInitializeMintInstruction, createMintToInstruction, createSetAuthorityInstruction, createTransferInstruction, ExtensionType, getAssociatedTokenAddressSync, getMintLen, LENGTH_SIZE, TOKEN_2022_PROGRAM_ID, TYPE_SIZE, } from "@solana/spl-token";
+import { createInitializeInstruction, pack, } from "@solana/spl-token-metadata";
 const SECRET = process.env.ENCRYPTION_SECRET;
 const connection = new Connection(process.env.RPC_URL);
 export async function createWallet(name, chatId) {
@@ -138,6 +138,7 @@ export async function createNFT(name, ticker, uri, chatId) {
         const mintLen = getMintLen([ExtensionType.MetadataPointer]);
         const metadataLen = TYPE_SIZE + LENGTH_SIZE + pack(metadata).length;
         const mintLamports = await connection.getMinimumBalanceForRentExemption(mintLen + metadataLen);
+        const ata = await getAssociatedTokenAddressSync(mintKeypair.publicKey, payer.publicKey, false, TOKEN_2022_PROGRAM_ID);
         const mintTransaction = new Transaction().add(SystemProgram.createAccount({
             fromPubkey: payer.publicKey,
             newAccountPubkey: mintKeypair.publicKey,
@@ -153,11 +154,19 @@ export async function createNFT(name, ticker, uri, chatId) {
             uri: metadata.uri,
             mintAuthority: payer.publicKey,
             updateAuthority: payer.publicKey,
-        }));
+        }), createAssociatedTokenAccountInstruction(payer.publicKey, ata, payer.publicKey, mintKeypair.publicKey, TOKEN_2022_PROGRAM_ID), createMintToInstruction(mintKeypair.publicKey, ata, payer.publicKey, 1, [], TOKEN_2022_PROGRAM_ID), createSetAuthorityInstruction(mintKeypair.publicKey, payer.publicKey, AuthorityType.MintTokens, null, [payer], TOKEN_2022_PROGRAM_ID));
         const signature = await sendAndConfirmTransaction(connection, mintTransaction, [payer, mintKeypair]);
+        await prisma.token.create({
+            data: {
+                userId: wallet.id,
+                name: name,
+                mintAddress: mintKeypair.publicKey.toBase58(),
+            },
+        });
         return {
             success: true,
             mintAddress: mintKeypair.publicKey.toBase58(),
+            ata,
             signature,
         };
     }
@@ -165,5 +174,26 @@ export async function createNFT(name, ticker, uri, chatId) {
         console.error("Error creating NFT:", error);
         return { success: false, error };
     }
+}
+export async function transferNFT(from, to, mintAddress) {
+    try {
+        const payer = Keypair.fromSecretKey(bs58.decode(aesDecrypt(from.privateKey, SECRET)));
+        const toPubkey = new PublicKey(to);
+        const mint = new PublicKey(mintAddress);
+        const senderAta = await getAssociatedTokenAddressSync(new PublicKey(mintAddress), payer.publicKey, false, TOKEN_2022_PROGRAM_ID);
+        const receiverAta = await getAssociatedTokenAddressSync(new PublicKey(mintAddress), toPubkey, false, TOKEN_2022_PROGRAM_ID);
+        const txn = new Transaction().add(createAssociatedTokenAccountInstruction(payer.publicKey, receiverAta, toPubkey, mint, TOKEN_2022_PROGRAM_ID), createTransferInstruction(senderAta, receiverAta, payer.publicKey, 1, [], TOKEN_2022_PROGRAM_ID));
+        const signature = await sendAndConfirmTransaction(connection, txn, [payer]);
+        return { success: true, signature };
+    }
+    catch (error) {
+        console.log("Error transferring:", error);
+        return { success: false, error: "Error transferring" };
+    }
+}
+export async function getTokenAccounts(walletPublicKey) {
+    const tokenAccounts = await connection.getParsedTokenAccountsByOwner(walletPublicKey, { programId: TOKEN_2022_PROGRAM_ID });
+    console.log(JSON.stringify(tokenAccounts));
+    return tokenAccounts;
 }
 //# sourceMappingURL=commands.js.map
