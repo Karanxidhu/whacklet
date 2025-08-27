@@ -33,6 +33,9 @@ bot.command("start", async (ctx) => {
       { command: "checkbalance", description: "Check wallet balace" },
       { command: "getdefaultwallet", description: "Get default wallets" },
       { command: "setdefaultwallet", description: "set default wallets" },
+      { command: "nft", description: "Create an NFT" },
+      { command: "transfernft", description: "Transfer an NFT" },
+      { command: "gettokens", description: "Get token accounts" },
     ],
     {
       scope: { type: "chat", chat_id: ctx.chat.id },
