@@ -25,8 +25,8 @@ export declare function transferNFT(from: Wallet, to: string, mintAddress: strin
     error: string;
     signature?: never;
 }>;
-export declare function getTokenAccounts(walletPublicKey: PublicKey): Promise<import("@solana/web3.js").RpcResponseAndContext<{
+export declare function getTokenAccounts(walletPublicKey: PublicKey): Promise<{
     pubkey: PublicKey;
     account: import("@solana/web3.js").AccountInfo<import("@solana/web3.js").ParsedAccountData>;
-}[]>>;
+}[]>;
 //# sourceMappingURL=commands.d.ts.map

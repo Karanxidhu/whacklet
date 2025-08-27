@@ -191,9 +191,74 @@ export async function transferNFT(from, to, mintAddress) {
         return { success: false, error: "Error transferring" };
     }
 }
+const res = {
+    context: { apiVersion: "2.3.6", slot: 403925231 },
+    value: [
+        {
+            account: {
+                data: {
+                    parsed: {
+                        info: {
+                            extensions: [{ extension: "immutableOwner" }],
+                            isNative: false,
+                            mint: "BCMynXkmykFkjhLKGtKFfZdYpk8DiEB6SVMJEaRXRzxR",
+                            owner: "9tRfxFrXU7yuhxWpViKrsu78NYHJ1c6RNcRrBcx8pt5c",
+                            state: "initialized",
+                            tokenAmount: {
+                                amount: "1",
+                                decimals: 0,
+                                uiAmount: 1,
+                                uiAmountString: "1",
+                            },
+                        },
+                        type: "account",
+                    },
+                    program: "spl-token-2022",
+                    space: 170,
+                },
+                executable: false,
+                lamports: 2074080,
+                owner: "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb",
+                rentEpoch: 18446744073709552000,
+                space: 170,
+            },
+            pubkey: "28wsSPeFCGDS95hTBADsdCcX4t91hdmFWgNw6625gpJ7",
+        },
+        {
+            account: {
+                data: {
+                    parsed: {
+                        info: {
+                            extensions: [{ extension: "immutableOwner" }],
+                            isNative: false,
+                            mint: "2LGxFihoUKgupSGavpZ7KxPGLFBSoVggmEzTP7GVYkYM",
+                            owner: "9tRfxFrXU7yuhxWpViKrsu78NYHJ1c6RNcRrBcx8pt5c",
+                            state: "initialized",
+                            tokenAmount: {
+                                amount: "1",
+                                decimals: 0,
+                                uiAmount: 1,
+                                uiAmountString: "1",
+                            },
+                        },
+                        type: "account",
+                    },
+                    program: "spl-token-2022",
+                    space: 170,
+                },
+                executable: false,
+                lamports: 2074080,
+                owner: "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb",
+                rentEpoch: 18446744073709552000,
+                space: 170,
+            },
+            pubkey: "G2WWqKjhHkzmTNj2DX2k8N4pAwFseiagBSHwxh2gnfXZ",
+        },
+    ],
+};
 export async function getTokenAccounts(walletPublicKey) {
     const tokenAccounts = await connection.getParsedTokenAccountsByOwner(walletPublicKey, { programId: TOKEN_2022_PROGRAM_ID });
     console.log(JSON.stringify(tokenAccounts));
-    return tokenAccounts;
+    return tokenAccounts.value;
 }
 //# sourceMappingURL=commands.js.map

@@ -355,14 +355,12 @@ bot.command("transfernft", async (ctx) => {
         )}\``,
       { parse_mode: "MarkdownV2" }
     );
-  }else{
-    await ctx.reply(  `💰 *Transfer Failed* 😔`,
-      { parse_mode: "MarkdownV2" }
-    );
+  } else {
+    await ctx.reply(`💰 *Transfer Failed* 😔`, { parse_mode: "MarkdownV2" });
   }
 });
 
-bot.command("gettokens", async(ctx) =>{
+bot.command("gettokens", async (ctx) => {
   const chatId = ctx.chat.id.toString();
 
   const user = await prisma.user.findFirst({
@@ -383,7 +381,33 @@ bot.command("gettokens", async(ctx) =>{
     );
     return;
   }
-  const tokenAccounts = await getTokenAccounts(new PublicKey(aesDecrypt(wallet.publicKey, process.env.ENCRYPTION_SECRET!)));
-  await ctx.reply(`💰 *Tokens*\n\n` )
-})
+  const tokenAccounts = await getTokenAccounts(
+    new PublicKey(aesDecrypt(wallet.publicKey, process.env.ENCRYPTION_SECRET!))
+  );
+
+  if (tokenAccounts.length === 0) {
+    await ctx.reply("No token accounts found");
+    return;
+  }
+
+  let reply = `*💼 Token Accounts:*\n`;
+
+  for (const tokenAccount of tokenAccounts) {
+    const { mint, tokenAmount } = tokenAccount.account.data.parsed.info;
+    const pubkey = tokenAccount.pubkey;
+    const amount = tokenAmount.uiAmount;
+
+    reply += `
+━━━━━━━━━━━━━━━━━━━━
+👛 *Token Mint:* \`${mint}\`
+🔑 *Account PubKey:* \`${pubkey}\`
+💰 *Balance:* \`${amount}\`
+━━━━━━━━━━━━━━━━━━━━
+`;
+  }
+
+  reply += `\n⚠️ _Keep your private key safe and never share it_`;
+
+  await bot.api.sendMessage(chatId, reply, { parse_mode: "MarkdownV2" });
+});
 bot.start();

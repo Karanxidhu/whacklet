@@ -354,6 +354,5 @@ export async function getTokenAccounts(walletPublicKey: PublicKey) {
     walletPublicKey,
     { programId: TOKEN_2022_PROGRAM_ID }
   );
-  console.log(JSON.stringify(tokenAccounts));
-  return tokenAccounts;
+  return tokenAccounts.value;
 }
